@@ -9,7 +9,7 @@ Installation
 
 To install the extension, clone this repository and symlink the directory
 "area-screenshot@dasprids.de" into "~/.local/share/gnome-shell/extensions/".
-Then restart gnome-shell (<Alt> + F2 and enter "r"), open gnome-tweak-tool and
+Then restart gnome-shell (&lt;Alt&gt; + F2 and enter "r"), open gnome-tweak-tool and
 enable the extension.
 
 Configuration
@@ -18,13 +18,13 @@ Configuration
 By default, this extension does nothing; you have to assign a keyboard shortcut
 to it. To do this, you can run the following command:
 
-key='/apps/metacity/global_keybindings/run_command_10'  
-gconftool-2 -s --type string "$key" '<Super>Print'
+key='/apps/metacity/global_keybindings/run_command_10'<br>
+gconftool-2 -s --type string "$key" '&lt;Super&gt;Print'
 
 Usage
 -----
 
-When you hit <Super> + Print now, you can select an area on your screen with
+When you hit &lt;Super&gt; + Print now, you can select an area on your screen with
 your mouse. After releasing your mouse, a new screenshot will be saved in your
 local "Pictures" directory with the current timestamp.
 
