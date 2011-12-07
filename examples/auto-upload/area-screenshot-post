@@ -18,11 +18,11 @@ data=$(cat /tmp/screenshot.png | base64)
 hash=$(echo -n "$data$password" | sha1sum | cut -d' ' -f1)
 
 url=$( \
-    echo -n $data | \
+    echo -n "$data" | \
         curl --header "X-Username: $username" \
              --header "X-Signature: $hash" \
              --header "Content-Type: text/plain" \
-             --data-ascii "@-" \
+             --data-binary "@-" \
              "$posturl" \
 )
 
