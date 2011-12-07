@@ -18,7 +18,7 @@ Configuration
 By default, this extension does nothing; you have to assign a keyboard shortcut
 to it. To do this, you can run the following command:
 
-key='/apps/metacity/global_keybindings/run_command_10'
+key='/apps/metacity/global_keybindings/run_command_10'  
 gconftool-2 -s --type string "$key" '<Super>Print'
 
 Usage
