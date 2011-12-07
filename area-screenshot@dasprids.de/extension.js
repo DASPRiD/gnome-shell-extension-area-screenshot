@@ -1,10 +1,11 @@
-const St       = imports.gi.St; 
 const Clutter  = imports.gi.Clutter;
 const Lang     = imports.lang;
 const Shell    = imports.gi.Shell;
 const Mainloop = imports.mainloop;
+const GLib     = imports.gi.GLib;
 const Gdk      = imports.gi.Gdk;
 const Main     = imports.ui.main;
+const Util     = imports.misc.util;
 
 // Not the most elegant solution, will be fixed with Mutter 3.3.2.
 const SCREENSHOT_KEY_BINDING = 'run_command_10';
@@ -105,7 +106,34 @@ AreaScreenshot.prototype = {
         let width  = Math.abs(x1 - x2);
         let height = Math.abs(y1 - y2);
 
-        global.screenshot_area(x, y, width, height, '/home/dasprid/Desktop/screenshot.png', function (obj, result) { });
+        let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
+        let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+
+        global.screenshot_area(x, y, width, height, filename, function (obj, result) {
+            let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
+
+            if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
+                Util.spawn([postScript, filename]);
+            }
+        });
+    },
+
+    _getNewScreenshotFilename: function() {
+        let date     = new Date();
+        let filename = 'screenshot-'
+                     + date.getFullYear() + '-'
+                     + this._padNum(date.getMonth() + 1) + '-'
+                     + this._padNum(date.getDate()) + 'T'
+                     + this._padNum(date.getHours()) + ':'
+                     + this._padNum(date.getMinutes()) + ':'
+                     + this._padNum(date.getSeconds())
+                     + '.png';
+
+        return filename;
+    },
+
+    _padNum: function(num) {
+        return (num < 10 ? '0' + num : num);
     }
 }
 
