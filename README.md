@@ -35,3 +35,6 @@ This extension allows you to process screenshots automatically after taking
 them. For this purpose, it checks for an executable in the directory
 "~/bin/area-screenshot-post". If this file exists, it will be executed with
 the absolute filename of the generated screenshot as argument.
+
+An example for automatically uploading taken screenshots can be found in the
+examples directory.
