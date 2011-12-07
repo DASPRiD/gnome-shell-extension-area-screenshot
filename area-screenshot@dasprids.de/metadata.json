@@ -2,7 +2,7 @@
     "shell-version": ["3.2"],
     "uuid":          "area-screenshot@dasprids.de",
     "name":          "Area Screenshot",
-    "description":   "Make are screenshot of a specific area",
-    "url":           "https://github.com/dasprid/gnome-shell-extensions-area-screenshot"
+    "description":   "Make a screenshot of a specific area",
+    "url":           "https://github.com/DASPRiD/gnome-shell-extension-area-screenshot"
 }
 

@@ -11,32 +11,24 @@ const Util     = imports.misc.util;
 const SCREENSHOT_KEY_BINDING = 'run_command_10';
 const MOUSE_POLL_FREQUENCY   = 50;
 
-let areaScreenshot;
-
-function AreaScreenshot() {
-    this._init();
-}
+function AreaScreenshot() { }
 
 AreaScreenshot.prototype = {
-    _init: function() {
-        this._enabled = false;
-    },
-
     enable: function() {
         let shellwm = global.window_manager;
         shellwm.takeover_keybinding(SCREENSHOT_KEY_BINDING);
-        shellwm.connect('keybinding::' + SCREENSHOT_KEY_BINDING, Lang.bind(this, this._onGlobalKeyBinding));
-
-        this._enabled = true;
+        this._keyBindingId = shellwm.connect('keybinding::' + SCREENSHOT_KEY_BINDING, Lang.bind(this, this._onGlobalKeyBinding));
     },
 
     disable: function() {
-        // We cannot release keybindings right now.
-        this._enabled = false;
+        if (this._keyBindingId) {
+            let shellwm = global.window_manager;
+            shellwm.disconnect(this._keyBindingId);
+        }
     },
 
     _onGlobalKeyBinding: function() {
-        if (!this._enabled || this._mouseTrackingId) {
+        if (this._mouseTrackingId) {
             return;
         }
 
@@ -138,13 +130,6 @@ AreaScreenshot.prototype = {
 }
 
 function init() {
-    areaScreenshot = new AreaScreenshot();
+    return new AreaScreenshot();
 }
 
-function enable() {
-    areaScreenshot.enable();
-}
-
-function disable() {
-    areaScreenshot.disable();
-}
