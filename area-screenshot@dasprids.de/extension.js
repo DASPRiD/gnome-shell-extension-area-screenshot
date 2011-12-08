@@ -9,7 +9,6 @@ const Util     = imports.misc.util;
 
 // Not the most elegant solution, will be fixed with Mutter 3.3.2.
 const SCREENSHOT_KEY_BINDING = 'run_command_10';
-const MOUSE_POLL_FREQUENCY   = 50;
 
 function AreaScreenshot() { }
 
@@ -24,6 +23,7 @@ AreaScreenshot.prototype = {
         if (this._keyBindingId) {
             let shellwm = global.window_manager;
             shellwm.disconnect(this._keyBindingId);
+            this._keyBindingId = null;
         }
     },
 
@@ -32,15 +32,18 @@ AreaScreenshot.prototype = {
             return;
         }
 
-        this._xStart    = -1;
-        this._yStart    = -1;
-        this._selecting = false;
+        this._xStart = -1;
+        this._yStart = -1;
+        this._xEnd   = -1;
+        this._yEnd   = -1;
 
         this._selectionBox = new Shell.GenericContainer({
             name:        'area-selection',
             style_class: 'area-selection',
             visible:     true,
-            reactive:    true
+            reactive:    true,
+            x:           -10,
+            y:           -10
         });
 
         Main.uiGroup.add_actor(this._selectionBox);
@@ -51,49 +54,92 @@ AreaScreenshot.prototype = {
 
         global.set_cursor(Shell.Cursor.POINTING_HAND);
 
-        this._mouseTrackingId = Mainloop.timeout_add(
-            MOUSE_POLL_FREQUENCY,
-            Lang.bind(this, this._handleMousePosition)
-        );
+        this._buttonPressEventId = global.stage.connect('button-press-event', Lang.bind(this, this._onButtonPressEvent));
+        this._keyPressEventId    = global.stage.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
     },
 
-    _handleMousePosition: function() {
-        let [xMouse, yMouse, mask] = global.get_pointer();
-
-        if (this._selecting) {
-            if (xMouse != this._xStart || yMouse != this._yStart) {
-                let x      = Math.min(xMouse, this._xStart);
-                let y      = Math.min(yMouse, this._yStart);
-                let width  = Math.abs(xMouse - this._xStart);
-                let height = Math.abs(yMouse - this._yStart);
-
-                this._selectionBox.set_position(x, y);
-                this._selectionBox.set_size(width, height);
-            }
-
-            if (!(mask & Gdk.ModifierType.BUTTON1_MASK)) {
-                this._makeScreenshot(this._xStart, this._yStart, xMouse, yMouse);
-
-                Mainloop.source_remove(this._mouseTrackingId);
-                this._mouseTrackingId = null;
-
-                Main.popModal(this._selectionBox);
-                this._selectionBox.destroy();
-                return false;
-
-                global.unset_cursor();
-            }
-        } else {
-            if (mask & Gdk.ModifierType.BUTTON1_MASK) {
-                this._selecting = true;
-                this._xStart    = xMouse;
-                this._yStart    = yMouse;
-
-                this._selectionBox.set_position(xMouse, yMouse);
-            }
+    _onKeyPressEvent: function(actor, event) {
+        if (event.get_key_symbol() == Clutter.Escape) {
+            this._close();
+            return true;
         }
 
+        return false;
+    },
+
+    _onButtonPressEvent: function(actor, event) {
+        if (event.get_button() != 1) {
+            return false;
+        }
+
+        let [xMouse, yMouse, mask] = global.get_pointer();
+
+        this._xStart = xMouse;
+        this._yStart = yMouse;
+
+        this._selectionBox.set_position(this._xStart, this._yStart);
+
+        if (this._buttonPressEventId) {
+            global.stage.disconnect(this._buttonPressEventId);
+            this._buttonPressEventId = null;
+        }
+
+        this._motionEventId        = global.stage.connect('motion-event', Lang.bind(this, this._onMotionEvent));
+        this._buttonReleaseEventId = global.stage.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
+
         return true;
+    },
+
+    _onMotionEvent: function(actor, event) {
+        let [xMouse, yMouse, mask] = global.get_pointer();
+
+        if (xMouse != this._xStart || yMouse != this._yStart) {
+            this._xEnd = xMouse;
+            this._yEnd = yMouse;
+
+            let x      = Math.min(this._xEnd, this._xStart);
+            let y      = Math.min(this._yEnd, this._yStart);
+            let width  = Math.abs(this._xEnd - this._xStart);
+            let height = Math.abs(this._yEnd - this._yStart);
+
+            this._selectionBox.set_position(x, y);
+            this._selectionBox.set_size(width, height);
+        }
+
+        return false;
+    },
+
+    _onButtonReleaseEvent: function(actor, event) {
+        if (event.get_button() != 1) {
+            return false;
+        }
+
+        this._close();
+        this._makeScreenshot(this._xStart, this._yStart, this._xEnd, this._yEnd);
+
+        return true;
+    },
+
+    _close: function() {
+        Main.popModal(this._selectionBox);
+        this._selectionBox.destroy();
+
+        global.unset_cursor();
+
+        if (this._motionEventId) {
+            global.stage.disconnect(this._motionEventId);
+            this._motionEventId = null;
+        }
+
+        if (this._buttonReleaseEventId) {
+            global.stage.disconnect(this._buttonReleaseEventId);
+            this._buttonReleaseEventId = null;
+        }
+
+        if (this._keyPressEventEventId) {
+            global.stage.disconnect(this._keyPressEventEventId);
+            this._keyPressEventEventId = null;
+        }
     },
 
     _makeScreenshot: function(x1, y1, x2, y2) {
