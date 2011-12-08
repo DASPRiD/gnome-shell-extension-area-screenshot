@@ -49,6 +49,8 @@ AreaScreenshot.prototype = {
             return;
         }
 
+        global.set_cursor(Shell.Cursor.POINTING_HAND);
+
         this._mouseTrackingId = Mainloop.timeout_add(
             MOUSE_POLL_FREQUENCY,
             Lang.bind(this, this._handleMousePosition)
@@ -78,6 +80,8 @@ AreaScreenshot.prototype = {
                 Main.popModal(this._selectionBox);
                 this._selectionBox.destroy();
                 return false;
+
+                global.unset_cursor();
             }
         } else {
             if (mask & Gdk.ModifierType.BUTTON1_MASK) {
