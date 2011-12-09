@@ -9,9 +9,9 @@ posturl="http://yourhost.tld/gtkgrab/handler.php"
 filename="$1"
 
 # Add border and shadow
-convert $filename -bordercolor white -border 13 \
-                  \( +clone -background black -shadow 80x3+2+2 \) +swap \
-                  -background white -layers merge +repage /tmp/screenshot.png
+convert "$filename" -bordercolor white -border 13 \
+                    \( +clone -background black -shadow 80x3+2+2 \) +swap \
+                    -background white -layers merge +repage /tmp/screenshot.png
 
 # Upload image
 data=$(cat /tmp/screenshot.png | base64)
@@ -31,3 +31,6 @@ rm /tmp/screenshot.png
 # Copy URL to clipboard and notify the user
 echo -n "$url" | xclip -selection c
 notify-send --hint=int:transient:1 "Screenshot Uploaded" "Copied URL to clipboard:\n$url"
+
+# Remove original
+rm "$filename"
