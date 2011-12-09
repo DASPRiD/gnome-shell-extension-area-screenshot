@@ -54,68 +54,66 @@ AreaScreenshot.prototype = {
 
         global.set_cursor(Shell.Cursor.POINTING_HAND);
 
-        this._buttonPressEventId = global.stage.connect('button-press-event', Lang.bind(this, this._onButtonPressEvent));
-        this._keyPressEventId    = global.stage.connect('key-press-event', Lang.bind(this, this._onKeyPressEvent));
+        this._mouseDown       = false;
+        this._capturedEventId = global.stage.connect('captured-event', Lang.bind(this, this._onCapturedEvent));
     },
 
-    _onKeyPressEvent: function(actor, event) {
-        if (event.get_key_symbol() == Clutter.Escape) {
-            this._close();
-            return true;
+    _onCapturedEvent: function(actor, event) {
+        let type = event.type();
+
+        if (type == Clutter.EventType.KEY_PRESS) {
+            if (event.get_key_symbol() == Clutter.Escape) {
+                this._close();
+            }
+        } else if (type == Clutter.EventType.BUTTON_PRESS) {
+            if (event.get_button() != 1) {
+                return true;
+            }
+
+            let [xMouse, yMouse, mask] = global.get_pointer();
+
+            this._mouseDown = true;
+            this._xStart    = xMouse;
+            this._yStart    = yMouse;
+            this._xEnd      = xMouse;
+            this._yEnd      = yMouse;
+
+            this._selectionBox.set_position(this._xStart, this._yStart);
+        } else if (this._mouseDown) {
+            if (type == Clutter.EventType.MOTION) {
+                let [xMouse, yMouse, mask] = global.get_pointer();
+
+                if (xMouse != this._xStart || yMouse != this._yStart) {
+                    this._xEnd = xMouse;
+                    this._yEnd = yMouse;
+
+                    let x      = Math.min(this._xEnd, this._xStart);
+                    let y      = Math.min(this._yEnd, this._yStart);
+                    let width  = Math.abs(this._xEnd - this._xStart);
+                    let height = Math.abs(this._yEnd - this._yStart);
+
+                    this._selectionBox.set_position(x, y);
+                    this._selectionBox.set_size(width, height);
+                }
+            } else if (type == Clutter.EventType.BUTTON_RELEASE) {
+                if (event.get_button() != 1) {
+                    return true;
+                }
+
+                this._close();
+
+                let x      = Math.min(this._xEnd, this._xStart);
+                let y      = Math.min(this._yEnd, this._yStart);
+                let width  = Math.abs(this._xEnd - this._xStart);
+                let height = Math.abs(this._yEnd - this._yStart);
+
+                if (width < 5 && height < 5) {
+                    this._makeWindowScreenshot(this._xStart, this._yStart);
+                } else {
+                    this._makeAreaScreenshot(x, y, width, height);
+                }
+            }
         }
-
-        return false;
-    },
-
-    _onButtonPressEvent: function(actor, event) {
-        if (event.get_button() != 1) {
-            return false;
-        }
-
-        let [xMouse, yMouse, mask] = global.get_pointer();
-
-        this._xStart = xMouse;
-        this._yStart = yMouse;
-
-        this._selectionBox.set_position(this._xStart, this._yStart);
-
-        if (this._buttonPressEventId) {
-            global.stage.disconnect(this._buttonPressEventId);
-            this._buttonPressEventId = null;
-        }
-
-        this._motionEventId        = global.stage.connect('motion-event', Lang.bind(this, this._onMotionEvent));
-        this._buttonReleaseEventId = global.stage.connect('button-release-event', Lang.bind(this, this._onButtonReleaseEvent));
-
-        return true;
-    },
-
-    _onMotionEvent: function(actor, event) {
-        let [xMouse, yMouse, mask] = global.get_pointer();
-
-        if (xMouse != this._xStart || yMouse != this._yStart) {
-            this._xEnd = xMouse;
-            this._yEnd = yMouse;
-
-            let x      = Math.min(this._xEnd, this._xStart);
-            let y      = Math.min(this._yEnd, this._yStart);
-            let width  = Math.abs(this._xEnd - this._xStart);
-            let height = Math.abs(this._yEnd - this._yStart);
-
-            this._selectionBox.set_position(x, y);
-            this._selectionBox.set_size(width, height);
-        }
-
-        return false;
-    },
-
-    _onButtonReleaseEvent: function(actor, event) {
-        if (event.get_button() != 1) {
-            return false;
-        }
-
-        this._close();
-        this._makeScreenshot(this._xStart, this._yStart, this._xEnd, this._yEnd);
 
         return true;
     },
@@ -126,28 +124,32 @@ AreaScreenshot.prototype = {
 
         global.unset_cursor();
 
-        if (this._motionEventId) {
-            global.stage.disconnect(this._motionEventId);
-            this._motionEventId = null;
-        }
-
-        if (this._buttonReleaseEventId) {
-            global.stage.disconnect(this._buttonReleaseEventId);
-            this._buttonReleaseEventId = null;
-        }
-
-        if (this._keyPressEventEventId) {
-            global.stage.disconnect(this._keyPressEventEventId);
-            this._keyPressEventEventId = null;
+        if (this._capturedEventId) {
+            global.stage.disconnect(this._capturedEventId);
+            this._capturedEventId = null;
         }
     },
 
-    _makeScreenshot: function(x1, y1, x2, y2) {
-        let x      = Math.min(x1, x2);
-        let y      = Math.min(y1, y2);
-        let width  = Math.abs(x1 - x2);
-        let height = Math.abs(y1 - y2);
+    _makeWindowScreenshot: function(x, y) {
+        // @todo This is not complete yet, we need to focus the window which is
+        // at the given x,y coordinates.
+        //
+        // How to focus a window:
+        // Main.activateWindow(Main.getWindowActorsForWorkspace()[3].get_meta_window())
 
+        let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
+        let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+
+        if (global.screenshot_window(true, filename)) {
+            let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
+
+            if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
+                Util.spawn([postScript, filename]);
+            }
+        };
+    },
+
+    _makeAreaScreenshot: function(x, y, width, height) {
         let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
         let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
 
