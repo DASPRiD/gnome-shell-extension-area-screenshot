@@ -183,6 +183,11 @@ AreaScreenshot.prototype = {
             global.unset_cursor();
 
             this._modal = false;
+
+            if (this._capturedEventId) {
+                global.stage.disconnect(this._capturedEventId);
+                this._capturedEventId = null;
+            }
         }
     },
 
@@ -194,11 +199,6 @@ AreaScreenshot.prototype = {
             Main.uiGroup.remove_actor(this._timer);
             this._timer.destroy();
             this._timer = null;
-        }
-
-        if (this._capturedEventId) {
-            global.stage.disconnect(this._capturedEventId);
-            this._capturedEventId = null;
         }
     },
 

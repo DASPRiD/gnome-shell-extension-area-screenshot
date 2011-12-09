@@ -29,6 +29,12 @@ with your mouse. After releasing your mouse, a new screenshot will be saved in
 your local "Pictures" directory with the current timestamp. You can also take
 a screenshot of a single window by simply clicking on it.
 
+When taking an area screenshot, you can set a timer to be able to open context
+menus and such, which can't usually be captured. To set the timer, simply press
+the numbers 1 to 9 on your keyboard to define the countdown. The timer will
+appear in the bottom left of your screen. After making your selection, it will
+count down to zero. Pressing 0 on your keyboard will deactivate the timer.
+
 Advanced usage
 --------------
 
