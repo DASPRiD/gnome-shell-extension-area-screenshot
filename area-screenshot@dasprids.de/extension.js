@@ -107,7 +107,7 @@ AreaScreenshot.prototype = {
                 let width  = Math.abs(this._xEnd - this._xStart);
                 let height = Math.abs(this._yEnd - this._yStart);
 
-                if (width < 5 && height < 5) {
+                if (this._xEnd == -1 || this._yEnd == -1 || (width < 5 && height < 5)) {
                     this._makeWindowScreenshot(this._xStart, this._yStart);
                 } else {
                     this._makeAreaScreenshot(x, y, width, height);
