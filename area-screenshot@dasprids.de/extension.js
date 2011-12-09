@@ -108,7 +108,7 @@ AreaScreenshot.prototype = {
                 let height = Math.abs(this._yEnd - this._yStart);
 
                 if (this._xEnd == -1 || this._yEnd == -1 || (width < 5 && height < 5)) {
-                    this._makeWindowScreenshot(this._xStart, this._yStart);
+                    this._prepareWindowScreenshot(this._xStart, this._yStart);
                 } else {
                     this._makeAreaScreenshot(x, y, width, height);
                 }
@@ -130,7 +130,7 @@ AreaScreenshot.prototype = {
         }
     },
 
-    _makeWindowScreenshot: function(x, y) {
+    _prepareWindowScreenshot: function(x, y) {
         let windows = Main.getWindowActorsForWorkspace(global.screen.get_active_workspace_index()); 
         let window  = null;
 
@@ -139,7 +139,7 @@ AreaScreenshot.prototype = {
             let [width, height] = windows[i].get_size();
 
             if (x >= winX && y >= winY && x <= (winX + width) && y <= (winY + height)) {
-                window = windows[i];
+                window = windows[i].get_meta_window();
                 break;
             }
         }
@@ -149,29 +149,36 @@ AreaScreenshot.prototype = {
             return;
         }
 
-        let tracker      = Shell.WindowTracker.get_default();
-        let focusEventId = tracker.connect('notify::focus-app', Lang.bind(this, function() {
-            // Without this timeout, we will get a memory access violation.
-            let timeoutId = Mainloop.timeout_add(1, Lang.bind(this, function(){
-                let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
-                let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+        if (window.has_focus()) {
+            this._makeWindowScreenshot();
+        } else {
+            let tracker      = Shell.WindowTracker.get_default();
+            let focusEventId = tracker.connect('notify::focus-app', Lang.bind(this, function() {
+                // Without this timeout, we will get a memory access violation.
+                let timeoutId = Mainloop.timeout_add(1, Lang.bind(this, function(){
+                    this._makeWindowScreenshot();
+                    Mainloop.source_remove(timeoutId);
+                    return false;
+                }));
 
-                if (global.screenshot_window(true, filename)) {
-                    let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
-
-                    if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
-                        Util.spawn([postScript, filename]);
-                    }
-                };
-
-                Mainloop.source_remove(timeoutId);
-                return false;
+                tracker.disconnect(focusEventId);
             }));
 
-            tracker.disconnect(focusEventId);
-        }));
+            Main.activateWindow(window)
+        }
+    },
 
-        Main.activateWindow(window.get_meta_window())
+    _makeWindowScreenshot: function() {
+        let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
+        let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+
+        if (global.screenshot_window(true, filename)) {
+            let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
+
+            if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
+                Util.spawn([postScript, filename]);
+            }
+        };
     },
 
     _makeAreaScreenshot: function(x, y, width, height) {
