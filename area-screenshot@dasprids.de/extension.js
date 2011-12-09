@@ -169,34 +169,34 @@ AreaScreenshot.prototype = {
     },
 
     _makeWindowScreenshot: function() {
-        let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
-        let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+        let filename = this._getNewScreenshotFilename();
 
         if (global.screenshot_window(true, filename)) {
-            let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
-
-            if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
-                Util.spawn([postScript, filename]);
-            }
+            this._runPostScript(filename);
         };
     },
 
     _makeAreaScreenshot: function(x, y, width, height) {
-        let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
-        let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+        let filename = this._getNewScreenshotFilename();
 
-        global.screenshot_area(x, y, width, height, filename, function (obj, result) {
-            let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
+        global.screenshot_area(x, y, width, height, filename, Lang.bind(this, function (obj, result) {
+            this._runPostScript(filename);
+        }));
+    },
 
-            if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
-                Util.spawn([postScript, filename]);
-            }
-        });
+    _runPostScript: function(filename)
+    {
+        let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
+
+        if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
+            Util.spawn([postScript, filename]);
+        }
     },
 
     _getNewScreenshotFilename: function() {
         let date     = new Date();
-        let filename = 'screenshot-'
+        let filename = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) + '/'
+                     + 'screenshot-'
                      + date.getFullYear() + '-'
                      + this._padNum(date.getMonth() + 1) + '-'
                      + this._padNum(date.getDate()) + 'T'
