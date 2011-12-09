@@ -4,8 +4,10 @@ const Shell    = imports.gi.Shell;
 const Mainloop = imports.mainloop;
 const GLib     = imports.gi.GLib;
 const Gdk      = imports.gi.Gdk;
+const St       = imports.gi.St;
 const Main     = imports.ui.main;
 const Util     = imports.misc.util;
+const Tweener  = imports.ui.tweener;
 
 // Not the most elegant solution, will be fixed with Mutter 3.3.2.
 const SCREENSHOT_KEY_BINDING = 'run_command_10';
@@ -32,10 +34,13 @@ AreaScreenshot.prototype = {
             return;
         }
 
-        this._xStart = -1;
-        this._yStart = -1;
-        this._xEnd   = -1;
-        this._yEnd   = -1;
+        this._modal     = true;
+        this._mouseDown = false;
+        this._timeout   = 0;
+        this._xStart    = -1;
+        this._yStart    = -1;
+        this._xEnd      = -1;
+        this._yEnd      = -1;
 
         this._selectionBox = new Shell.GenericContainer({
             name:        'area-selection',
@@ -54,7 +59,6 @@ AreaScreenshot.prototype = {
 
         global.set_cursor(Shell.Cursor.POINTING_HAND);
 
-        this._mouseDown       = false;
         this._capturedEventId = global.stage.connect('captured-event', Lang.bind(this, this._onCapturedEvent));
     },
 
@@ -64,6 +68,12 @@ AreaScreenshot.prototype = {
         if (type == Clutter.EventType.KEY_PRESS) {
             if (event.get_key_symbol() == Clutter.Escape) {
                 this._close();
+            } else {
+                let num = (event.get_key_symbol() - Clutter.KEY_0);
+
+                if (num >= 0 && num <= 9) {
+                    this._setTimer(num);
+                }
             }
         } else if (type == Clutter.EventType.BUTTON_PRESS) {
             if (event.get_button() != 1) {
@@ -100,8 +110,6 @@ AreaScreenshot.prototype = {
                     return true;
                 }
 
-                this._close();
-
                 let x      = Math.min(this._xEnd, this._xStart);
                 let y      = Math.min(this._yEnd, this._yStart);
                 let width  = Math.abs(this._xEnd - this._xStart);
@@ -118,11 +126,75 @@ AreaScreenshot.prototype = {
         return true;
     },
 
+    _setTimer: function(timeout) {
+        if (timeout === 0) {
+            if (this._timer) {
+                Main.uiGroup.remove_actor(this._timer);
+                this._timer.destroy();
+                this._timer = null;
+            }
+        } else {
+            if (!this._timer) {
+                this._timer = new St.Label({
+                    style_class: 'timer'
+                });
+
+                Main.uiGroup.add_actor(this._timer);
+
+                let monitor       = global.screen.get_primary_monitor();
+                let monitorHeight = global.screen.get_monitor_geometry(monitor).height;
+
+                this._timer.set_position(
+                    20 + (this._timer.width / 2),
+                    (monitorHeight - (this._timer.height / 2) - 20)
+                );
+                this._timer.set_anchor_point_from_gravity(Clutter.Gravity.CENTER);
+            }
+
+            this._timer.set_text('' + timeout);
+        }
+
+        this._timeout = timeout;
+    },
+
+    _fadeOutTimer: function() {
+        this._timer.opacity = 255;
+        this._timer.scale_x = 1.0;
+        this._timer.scale_y = 1.0;
+
+        Tweener.addTween(this._timer, {
+            opacity:    0,
+            scale_x:    1.5,
+            scale_y:    1.5,
+            delay:      0.200,
+            time:       0.700,
+            transition: 'linear'
+        });
+    },
+
     _close: function() {
-        Main.popModal(this._selectionBox);
+        this._returnToDesktop();
+        this._finish();
+    },
+
+    _returnToDesktop: function() {
+        if (this._modal) {
+            Main.popModal(this._selectionBox);
+            global.unset_cursor();
+
+            this._modal = false;
+        }
+    },
+
+    _finish: function() {
+        Main.uiGroup.remove_actor(this._selectionBox);
         this._selectionBox.destroy();
 
-        global.unset_cursor();
+        if (this._timer) {
+            Main.uiGroup.remove_actor(this._timer);
+            this._timer.destroy();
+            this._timer = null;
+        }
 
         if (this._capturedEventId) {
             global.stage.disconnect(this._capturedEventId);
@@ -131,6 +203,8 @@ AreaScreenshot.prototype = {
     },
 
     _prepareWindowScreenshot: function(x, y) {
+        this._close();
+
         let windows = Main.getWindowActorsForWorkspace(global.screen.get_active_workspace_index()); 
         let window  = null;
 
@@ -155,7 +229,7 @@ AreaScreenshot.prototype = {
             let tracker      = Shell.WindowTracker.get_default();
             let focusEventId = tracker.connect('notify::focus-app', Lang.bind(this, function() {
                 // Without this timeout, we will get a memory access violation.
-                let timeoutId = Mainloop.timeout_add(1, Lang.bind(this, function(){
+                let timeoutId = Mainloop.timeout_add(1, Lang.bind(this, function() {
                     this._makeWindowScreenshot();
                     Mainloop.source_remove(timeoutId);
                     return false;
@@ -179,9 +253,31 @@ AreaScreenshot.prototype = {
     _makeAreaScreenshot: function(x, y, width, height) {
         let filename = this._getNewScreenshotFilename();
 
-        global.screenshot_area(x, y, width, height, filename, Lang.bind(this, function (obj, result) {
-            this._runPostScript(filename);
-        }));
+        if (this._timeout > 0) {
+            this._returnToDesktop();
+            this._fadeOutTimer();
+
+            let timeoutId = Mainloop.timeout_add(1000, Lang.bind(this, function() {
+                this._timeout--;
+
+                if (this._timeout > 0) {
+                    this._timer.set_text('' + this._timeout);
+                    this._fadeOutTimer();
+                } else {
+                    this._makeAreaScreenshot(x, y, width, height);
+                    Mainloop.source_remove(timeoutId);
+                    return false;
+                }
+
+                return true;
+            }));
+        } else {
+            this._close();
+
+            global.screenshot_area(x, y, width, height, filename, Lang.bind(this, function (obj, result) {
+                this._runPostScript(filename);
+            }));
+        }
     },
 
     _runPostScript: function(filename)

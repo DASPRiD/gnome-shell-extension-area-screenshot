@@ -2,3 +2,18 @@
     background-color: rgba(74, 144, 217, 0.5);
     border: 1px solid rgba(74, 144, 217, 1);
 }
+
+.timer {
+    width: 50px;
+    padding: 10px 5px;
+
+    font-size: 30px;
+    font-weight: bold;
+    color: #ffffff;
+    text-align: center;
+    vertical-align: middle;
+
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 2px solid #868686;
+    border-radius: 15px;
+}
