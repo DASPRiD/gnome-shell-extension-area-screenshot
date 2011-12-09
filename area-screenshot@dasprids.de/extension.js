@@ -131,22 +131,47 @@ AreaScreenshot.prototype = {
     },
 
     _makeWindowScreenshot: function(x, y) {
-        // @todo This is not complete yet, we need to focus the window which is
-        // at the given x,y coordinates.
-        //
-        // How to focus a window:
-        // Main.activateWindow(Main.getWindowActorsForWorkspace()[3].get_meta_window())
+        let windows = Main.getWindowActorsForWorkspace(global.screen.get_active_workspace_index()); 
+        let window  = null;
 
-        let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
-        let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+        for (let i = (windows.length - 1); i >= 0; i--) {
+            let [winX, winY]    = windows[i].get_position();
+            let [width, height] = windows[i].get_size();
 
-        if (global.screenshot_window(true, filename)) {
-            let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
-
-            if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
-                Util.spawn([postScript, filename]);
+            if (x >= winX && y >= winY && x <= (winX + width) && y <= (winY + height)) {
+                window = windows[i];
+                break;
             }
-        };
+        }
+
+        if (!window) {
+            // Can this really happen? At least the root window should match.
+            return;
+        }
+
+        let tracker      = Shell.WindowTracker.get_default();
+        let focusEventId = tracker.connect('notify::focus-app', Lang.bind(this, function() {
+            // Without this timeout, we will get a memory access violation.
+            let timeoutId = Mainloop.timeout_add(1, Lang.bind(this, function(){
+                let picturesPath = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
+                let filename     = picturesPath + '/' + this._getNewScreenshotFilename();
+
+                if (global.screenshot_window(true, filename)) {
+                    let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
+
+                    if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
+                        Util.spawn([postScript, filename]);
+                    }
+                };
+
+                Mainloop.source_remove(timeoutId);
+                return false;
+            }));
+
+            tracker.disconnect(focusEventId);
+        }));
+
+        Main.activateWindow(window.get_meta_window())
     },
 
     _makeAreaScreenshot: function(x, y, width, height) {
