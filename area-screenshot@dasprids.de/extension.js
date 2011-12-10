@@ -8,11 +8,20 @@ const St       = imports.gi.St;
 const Main     = imports.ui.main;
 const Util     = imports.misc.util;
 const Tweener  = imports.ui.tweener;
+const GConf    = imports.gi.GConf;
 
 // Not the most elegant solution, will be fixed with Mutter 3.3.2.
 const SCREENSHOT_KEY_BINDING = 'run_command_10';
 
-function AreaScreenshot() { }
+function AreaScreenshot() {
+    let client  = GConf.Client.get_default();
+    let key     = '/apps/metacity/global_keybindings/' + SCREENSHOT_KEY_BINDING;
+    let current = client.get_string(key);
+
+    if (current === 'disabled') {
+        client.set_string(key, '<Super>Print');
+    }
+}
 
 AreaScreenshot.prototype = {
     enable: function() {
