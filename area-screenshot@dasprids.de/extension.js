@@ -20,7 +20,7 @@ AreaScreenshot.prototype = {
         this._metaDisplay = global.screen.get_display();
         this._metaDisplay.add_keybinding (EXT_KEYNAME, EXT_SCHEMA, 0,
                                           Lang.bind(this,
-                                                    this._onGlobalKeybinding));
+                                                    this._onGlobalKeyBinding));
     },
 
     disable: function() {
