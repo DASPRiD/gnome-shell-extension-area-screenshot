@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+  <schema path="/org/gnome/shell/extensions/area-screenshot/" id="org.gnome.shell.extensions.area-screenshot">
+    <key type="as" name="keybinding">
+      
+      <default>[ ]</default>
+      <summary>List of keybindings</summary>
+      <description>A list of strings, each containing a keybinding.</description>
+    </key>
+  </schema>
+</schemalist>

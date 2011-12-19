@@ -9,24 +9,22 @@ const Main     = imports.ui.main;
 const Util     = imports.misc.util;
 const Tweener  = imports.ui.tweener;
 
-// Not the most elegant solution, will be fixed with Mutter 3.3.2.
-const SCREENSHOT_KEY_BINDING = 'run_command_10';
+const EXT_SCHEMA  = 'org.gnome.shell.extensions.area-screenshot';
+const EXT_KEYNAME = 'keybinding';
 
 function AreaScreenshot() { }
 
 AreaScreenshot.prototype = {
     enable: function() {
         let shellwm = global.window_manager;
-        shellwm.takeover_keybinding(SCREENSHOT_KEY_BINDING);
-        this._keyBindingId = shellwm.connect('keybinding::' + SCREENSHOT_KEY_BINDING, Lang.bind(this, this._onGlobalKeyBinding));
+        this._metaDisplay = global.screen.get_display();
+        this._metaDisplay.add_keybinding (EXT_KEYNAME, EXT_SCHEMA, 0,
+                                          Lang.bind(this,
+                                                    this._onGlobalKeybinding));
     },
 
     disable: function() {
-        if (this._keyBindingId) {
-            let shellwm = global.window_manager;
-            shellwm.disconnect(this._keyBindingId);
-            this._keyBindingId = null;
-        }
+        this._metaDisplay.remove_keybinding(EXT_KEYNAME);
     },
 
     _onGlobalKeyBinding: function() {
