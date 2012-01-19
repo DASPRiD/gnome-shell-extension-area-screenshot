@@ -1,0 +1,45 @@
+#!/bin/bash
+
+## default config
+destdir=${HOME}/Pictures/screenshots
+
+# filename of saved screenshot is in $1
+filename="$1"
+
+mkdir -p $destdir
+
+# this function tries to guess a nice filename for the user by looking
+# at the most recent file in $destdir and appending a _n to it (much
+# like ksnapshot and others do). The result is stored in the variable
+# passed in $1.
+guess_new_filename()
+{
+    local __resultvar=$1
+    readarray -t < <(ls -1t $destdir)
+    if [[ ${#MAPFILE[@]} -gt 0 ]]; then
+        local candidate=${MAPFILE[0]}
+        local candidate_base=${candidate%.*}
+        local candidate_ext=${candidate#*.}
+        echo "candidate_base is $candidate_base"
+        if [[ $candidate_base =~ ^(.*_)([0-9])$ ]]; then
+            local picnum
+            (( picnum = ${BASH_REMATCH[2]} + 1 ))
+            eval $__resultvar="'${BASH_REMATCH[1]}${picnum}.${candidate_ext}'"
+        else
+            echo "heee ${candidate_base}_1.${candidate_ext}"
+            eval $__resultvar="'${candidate_base}_1.${candidate_ext}'"
+        fi
+    else
+        eval $__resultvar="''"
+    fi
+}
+
+# get a sane filename
+guess_new_filename newfilename
+[[ $newfilename == "" ]] && newfilename="screenshot.png"
+# let the user override it if they would like
+chosenfilename=$(zenity --file-selection --save --confirm-overwrite --filename=$destdir/$newfilename)
+
+# do the rename (unless they canceled)
+[[ $? -eq 0 ]] && mv $filename $chosenfilename
+
