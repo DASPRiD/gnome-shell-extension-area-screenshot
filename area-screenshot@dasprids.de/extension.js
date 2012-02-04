@@ -240,12 +240,13 @@ AreaScreenshot.prototype = {
         }
     },
 
-    _makeWindowScreenshot: function() {
+    _makeWindowScreenshot: function () {
         let filename = this._getNewScreenshotFilename();
 
-        if (global.screenshot_window(true, filename)) {
-            this._runPostScript(filename);
-        };
+        global.screenshot_window(true, filename, Lang.bind(this,
+          function (obj, result) {
+              this._runPostScript(filename);
+          }))
     },
 
     _makeAreaScreenshot: function(x, y, width, height) {
