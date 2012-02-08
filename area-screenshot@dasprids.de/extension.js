@@ -1,13 +1,14 @@
-const Clutter  = imports.gi.Clutter;
-const Lang     = imports.lang;
-const Shell    = imports.gi.Shell;
-const Mainloop = imports.mainloop;
-const GLib     = imports.gi.GLib;
-const Gdk      = imports.gi.Gdk;
-const St       = imports.gi.St;
-const Main     = imports.ui.main;
-const Util     = imports.misc.util;
-const Tweener  = imports.ui.tweener;
+const Clutter   = imports.gi.Clutter;
+const Lang      = imports.lang;
+const Shell     = imports.gi.Shell;
+const Mainloop  = imports.mainloop;
+const GLib      = imports.gi.GLib;
+const Gdk       = imports.gi.Gdk;
+const St        = imports.gi.St;
+const Main      = imports.ui.main;
+const Util      = imports.misc.util;
+const Tweener   = imports.ui.tweener;
+const Flashspot = imports.ui.flashspot;
 
 const EXT_SCHEMA  = 'org.gnome.shell.extensions.area-screenshot';
 const EXT_KEYNAME = 'keybinding';
@@ -243,8 +244,10 @@ AreaScreenshot.prototype = {
     _makeWindowScreenshot: function () {
         let filename = this._getNewScreenshotFilename();
 
-        global.screenshot_window(true, filename, Lang.bind(this,
-          function (obj, result) {
+        global.screenshot_window(true, filename,
+              Lang.bind(this, function (obj, result, area) {
+              let flashspot = new Flashspot.Flashspot(area);
+              flashspot.fire();
               this._runPostScript(filename);
           }))
     },
@@ -273,8 +276,11 @@ AreaScreenshot.prototype = {
         } else {
             this._close();
 
-            global.screenshot_area(x, y, width, height, filename, Lang.bind(this, function (obj, result) {
-                this._runPostScript(filename);
+            global.screenshot_area(x, y, width, height, filename,
+              Lang.bind(this, function (obj, result, area) {
+              let flashspot = new Flashspot.Flashspot(area);
+              flashspot.fire();
+              this._runPostScript(filename);
             }));
         }
     },
