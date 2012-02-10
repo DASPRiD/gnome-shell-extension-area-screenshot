@@ -12,6 +12,7 @@ const Flashspot = imports.ui.flashspot;
 
 const EXT_SCHEMA  = 'org.gnome.shell.extensions.area-screenshot';
 const EXT_KEYNAME = 'keybinding';
+const SHUTTER_NOTIFY_ID = 1;
 
 function AreaScreenshot() { }
 
@@ -245,11 +246,7 @@ AreaScreenshot.prototype = {
         let filename = this._getNewScreenshotFilename();
 
         global.screenshot_window(true, filename,
-              Lang.bind(this, function (obj, result, area) {
-              let flashspot = new Flashspot.Flashspot(area);
-              flashspot.fire();
-              this._runPostScript(filename);
-          }))
+            Lang.bind(this, this._onScreenshotComplete, filename))
     },
 
     _makeAreaScreenshot: function(x, y, width, height) {
@@ -277,12 +274,18 @@ AreaScreenshot.prototype = {
             this._close();
 
             global.screenshot_area(x, y, width, height, filename,
-              Lang.bind(this, function (obj, result, area) {
-              let flashspot = new Flashspot.Flashspot(area);
-              flashspot.fire();
-              this._runPostScript(filename);
-            }));
+                Lang.bind(this, this._onScreenshotComplete, filename));
         }
+    },
+
+    _onScreenshotComplete: function(obj, result, area, filename) {
+        global.cancel_theme_sound(SHUTTER_NOTIFY_ID);
+        global.play_theme_sound(SHUTTER_NOTIFY_ID, 'camera-shutter');
+
+        let flashspot = new Flashspot.Flashspot(area);
+        flashspot.fire();
+
+        this._runPostScript(filename);
     },
 
     _runPostScript: function(filename)
