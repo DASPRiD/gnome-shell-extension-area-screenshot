@@ -245,7 +245,8 @@ AreaScreenshot.prototype = {
     _makeWindowScreenshot: function () {
         let filename = this._getNewScreenshotFilename();
 
-        global.screenshot_window(true, filename,
+        let screenshot = new Shell.Screenshot();
+        screenshot.screenshot_window(true, false, filename,
             Lang.bind(this, this._onScreenshotComplete, filename))
     },
 
@@ -273,7 +274,8 @@ AreaScreenshot.prototype = {
         } else {
             this._close();
 
-            global.screenshot_area(x, y, width, height, filename,
+            let screenshot = new Shell.Screenshot();
+            screenshot.screenshot_area(x, y, width, height, filename,
                 Lang.bind(this, this._onScreenshotComplete, filename));
         }
     },
