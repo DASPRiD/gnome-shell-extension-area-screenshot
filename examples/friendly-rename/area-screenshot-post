@@ -17,18 +17,21 @@ guess_new_filename()
     local __resultvar=$1
     readarray -t < <(ls -1t $destdir)
     if [[ ${#MAPFILE[@]} -gt 0 ]]; then
-        local candidate=${MAPFILE[0]}
-        local candidate_base=${candidate%.*}
-        local candidate_ext=${candidate#*.}
-        echo "candidate_base is $candidate_base"
-        if [[ $candidate_base =~ ^(.*_)([0-9])$ ]]; then
-            local picnum
-            (( picnum = ${BASH_REMATCH[2]} + 1 ))
-            eval $__resultvar="'${BASH_REMATCH[1]}${picnum}.${candidate_ext}'"
-        else
-            echo "heee ${candidate_base}_1.${candidate_ext}"
-            eval $__resultvar="'${candidate_base}_1.${candidate_ext}'"
-        fi
+        for candidate in "${MAPFILE[@]}"; do
+            # skip non-regular files (e.g. directories)
+            [[ -f "$destdir/$candidate" ]] || continue
+            local candidate_base=${candidate%.*}
+            local candidate_ext=${candidate#*.}
+            if [[ $candidate_base =~ ^(.*_)([0-9]+)$ ]]; then
+                local picnum
+                (( picnum = ${BASH_REMATCH[2]} + 1 ))
+                eval $__resultvar="'${BASH_REMATCH[1]}${picnum}.${candidate_ext}'"
+            else
+                eval $__resultvar="'${candidate_base}_1.${candidate_ext}'"
+            fi
+            # we only look at the first regular file, so we're done.
+            return
+        done
     else
         eval $__resultvar="''"
     fi
