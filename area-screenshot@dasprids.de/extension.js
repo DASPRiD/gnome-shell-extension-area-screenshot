@@ -1,32 +1,32 @@
-const Clutter  = imports.gi.Clutter;
-const Lang     = imports.lang;
-const Shell    = imports.gi.Shell;
-const Mainloop = imports.mainloop;
-const GLib     = imports.gi.GLib;
-const Gdk      = imports.gi.Gdk;
-const St       = imports.gi.St;
-const Main     = imports.ui.main;
-const Util     = imports.misc.util;
-const Tweener  = imports.ui.tweener;
+const Clutter   = imports.gi.Clutter;
+const Lang      = imports.lang;
+const Shell     = imports.gi.Shell;
+const Mainloop  = imports.mainloop;
+const GLib      = imports.gi.GLib;
+const Gdk       = imports.gi.Gdk;
+const St        = imports.gi.St;
+const Main      = imports.ui.main;
+const Util      = imports.misc.util;
+const Tweener   = imports.ui.tweener;
+const Flashspot = imports.ui.flashspot;
 
-// Not the most elegant solution, will be fixed with Mutter 3.3.2.
-const SCREENSHOT_KEY_BINDING = 'run_command_10';
+const EXT_SCHEMA  = 'org.gnome.shell.extensions.area-screenshot';
+const EXT_KEYNAME = 'keybinding';
+const SHUTTER_NOTIFY_ID = 1;
 
 function AreaScreenshot() { }
 
 AreaScreenshot.prototype = {
     enable: function() {
         let shellwm = global.window_manager;
-        shellwm.takeover_keybinding(SCREENSHOT_KEY_BINDING);
-        this._keyBindingId = shellwm.connect('keybinding::' + SCREENSHOT_KEY_BINDING, Lang.bind(this, this._onGlobalKeyBinding));
+        this._metaDisplay = global.screen.get_display();
+        this._metaDisplay.add_keybinding (EXT_KEYNAME, EXT_SCHEMA, 0,
+                                          Lang.bind(this,
+                                                    this._onGlobalKeyBinding));
     },
 
     disable: function() {
-        if (this._keyBindingId) {
-            let shellwm = global.window_manager;
-            shellwm.disconnect(this._keyBindingId);
-            this._keyBindingId = null;
-        }
+        this._metaDisplay.remove_keybinding(EXT_KEYNAME);
     },
 
     _onGlobalKeyBinding: function() {
@@ -242,12 +242,12 @@ AreaScreenshot.prototype = {
         }
     },
 
-    _makeWindowScreenshot: function() {
+    _makeWindowScreenshot: function () {
         let filename = this._getNewScreenshotFilename();
 
-        if (global.screenshot_window(true, filename)) {
-            this._runPostScript(filename);
-        };
+        let screenshot = new Shell.Screenshot();
+        screenshot.screenshot_window(true, false, filename,
+            Lang.bind(this, this._onScreenshotComplete, filename))
     },
 
     _makeAreaScreenshot: function(x, y, width, height) {
@@ -274,15 +274,25 @@ AreaScreenshot.prototype = {
         } else {
             this._close();
 
-            global.screenshot_area(x, y, width, height, filename, Lang.bind(this, function (obj, result) {
-                this._runPostScript(filename);
-            }));
+            let screenshot = new Shell.Screenshot();
+            screenshot.screenshot_area(x, y, width, height, filename,
+                Lang.bind(this, this._onScreenshotComplete, filename));
         }
+    },
+
+    _onScreenshotComplete: function(obj, result, area, filename) {
+        global.cancel_theme_sound(SHUTTER_NOTIFY_ID);
+        global.play_theme_sound(SHUTTER_NOTIFY_ID, 'camera-shutter');
+
+        let flashspot = new Flashspot.Flashspot(area);
+        flashspot.fire();
+
+        this._runPostScript(filename);
     },
 
     _runPostScript: function(filename)
     {
-        let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
+        let postScript = GLib.get_home_dir() + '/.local/bin/area-screenshot-post';
 
         if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
             Util.spawn([postScript, filename]);
@@ -291,8 +301,8 @@ AreaScreenshot.prototype = {
 
     _getNewScreenshotFilename: function() {
         let date     = new Date();
-        let filename = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) + '/'
-                     + 'screenshot-'
+        let filename = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DESKTOP) + '/'
+                     + 'area-'
                      + date.getFullYear() + '-'
                      + this._padNum(date.getMonth() + 1) + '-'
                      + this._padNum(date.getDate()) + 'T'
