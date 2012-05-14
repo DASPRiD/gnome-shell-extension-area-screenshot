@@ -292,7 +292,7 @@ AreaScreenshot.prototype = {
 
     _runPostScript: function(filename)
     {
-        let postScript = GLib.get_home_dir() + '/.local/bin/area-screenshot-post';
+        let postScript = GLib.get_home_dir() + '/bin/area-screenshot-post';
 
         if (GLib.file_test(postScript, GLib.FileTest.EXISTS)) {
             Util.spawn([postScript, filename]);
@@ -301,8 +301,8 @@ AreaScreenshot.prototype = {
 
     _getNewScreenshotFilename: function() {
         let date     = new Date();
-        let filename = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DESKTOP) + '/'
-                     + 'area-'
+        let filename = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) + '/'
+                     + 'screenshot-'
                      + date.getFullYear() + '-'
                      + this._padNum(date.getMonth() + 1) + '-'
                      + this._padNum(date.getDate()) + 'T'
