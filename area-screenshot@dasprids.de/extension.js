@@ -1,32 +1,65 @@
-const Clutter   = imports.gi.Clutter;
-const Lang      = imports.lang;
-const Shell     = imports.gi.Shell;
-const Mainloop  = imports.mainloop;
-const GLib      = imports.gi.GLib;
-const Gdk       = imports.gi.Gdk;
-const St        = imports.gi.St;
-const Main      = imports.ui.main;
-const Util      = imports.misc.util;
-const Tweener   = imports.ui.tweener;
-const Flashspot = imports.ui.flashspot;
+const Clutter        = imports.gi.Clutter;
+const Lang           = imports.lang;
+const Shell          = imports.gi.Shell;
+const Mainloop       = imports.mainloop;
+const GLib           = imports.gi.GLib;
+const Gdk            = imports.gi.Gdk;
+const Gio            = imports.gi.Gio;
+const St             = imports.gi.St;
+const Main           = imports.ui.main;
+const Util           = imports.misc.util;
+const Tweener        = imports.ui.tweener;
+const Flashspot      = imports.ui.flashspot;
+const ExtensionUtils = imports.misc.extensionUtils;
 
-const EXT_SCHEMA  = 'org.gnome.shell.extensions.area-screenshot';
-const EXT_KEYNAME = 'keybinding';
+const EXT_SCHEMA        = 'org.gnome.shell.extensions.area-screenshot';
+const EXT_KEYNAME       = 'keybinding';
 const SHUTTER_NOTIFY_ID = 1;
 
 function AreaScreenshot() { }
 
 AreaScreenshot.prototype = {
     enable: function() {
-        let shellwm = global.window_manager;
+        let shellwm       = global.window_manager;
         this._metaDisplay = global.screen.get_display();
-        this._metaDisplay.add_keybinding (EXT_KEYNAME, EXT_SCHEMA, 0,
-                                          Lang.bind(this,
-                                                    this._onGlobalKeyBinding));
+
+        this._metaDisplay.add_keybinding(
+            EXT_KEYNAME, this._getSettings(EXT_SCHEMA), 0,
+            Lang.bind(this, this._onGlobalKeyBinding)
+        );
     },
 
     disable: function() {
         this._metaDisplay.remove_keybinding(EXT_KEYNAME);
+    },
+
+    _getSettings: function(schema) {
+        let extension = ExtensionUtils.getCurrentExtension();
+        const GioSSS  = Gio.SettingsSchemaSource;
+
+        let schemaDir = extension.dir.get_child('schemas');
+        let schemaSource;
+
+        if (schemaDir.query_exists(null)) {
+            schemaSource = GioSSS.new_from_directory(
+                schemaDir.get_path(),
+                GioSSS.get_default(),
+                false
+            );
+        } else {
+            schemaSource = GioSSS.get_default();
+        }
+
+        let schemaObj = schemaSource.lookup(schema, true);
+
+        if (!schemaObj) {
+            throw new Error(
+                'Schema ' + schema + ' could not be found for extension '
+                + extension.metadata.uuid + '. Please check your installation.'
+            );
+        }
+
+        return new Gio.Settings({settings_schema: schemaObj});
     },
 
     _onGlobalKeyBinding: function() {
@@ -246,8 +279,10 @@ AreaScreenshot.prototype = {
         let filename = this._getNewScreenshotFilename();
 
         let screenshot = new Shell.Screenshot();
-        screenshot.screenshot_window(true, false, filename,
-            Lang.bind(this, this._onScreenshotComplete, filename))
+        screenshot.screenshot_window(
+            true, false, filename,
+            Lang.bind(this, this._onScreenshotComplete, filename)
+        );
     },
 
     _makeAreaScreenshot: function(x, y, width, height) {
@@ -275,8 +310,10 @@ AreaScreenshot.prototype = {
             this._close();
 
             let screenshot = new Shell.Screenshot();
-            screenshot.screenshot_area(x, y, width, height, filename,
-                Lang.bind(this, this._onScreenshotComplete, filename));
+            screenshot.screenshot_area(
+                x, y, width, height, filename,
+                Lang.bind(this, this._onScreenshotComplete, filename)
+            );
         }
     },
 
