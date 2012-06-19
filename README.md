@@ -15,11 +15,11 @@ gnome-tweak-tool and enable the extension.
 Configuration
 -------------
 
-By default, this extension does nothing; you have to assign a keyboard shortcut
-to it. To do this, you can run the following command:
-
-key='/apps/metacity/global_keybindings/run_command_10'<br>
-gconftool-2 -s --type string "$key" '&lt;Super&gt;Print'
+By default, this extension is configured to work with the keybinding
+&lt;Super&gt; + Print. You can change this binding via gsettings, although
+a configuration tool will be added soon. When you are not installing the
+extension via via https://extensions.gnome.org, you have to compile the
+gschema file manually.
 
 Usage
 -----
