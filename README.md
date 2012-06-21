@@ -21,6 +21,10 @@ a configuration tool will be added soon. When you are not installing the
 extension via via https://extensions.gnome.org, you have to compile the
 gschema file manually.
 
+To modify the keybinding, you can edit
+```schemas/org.gnome.shell.extensions.area-screenshot.gschema.xml```. After
+editing, you will have to recompile the schema using ```glib-compile-schemas```.
+
 Usage
 -----
 
