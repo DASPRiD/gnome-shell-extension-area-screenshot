@@ -1,5 +1,5 @@
 {
-    "shell-version": ["3.4"],
+    "shell-version": ["3.4", "3.6"],
     "uuid":          "area-screenshot@dasprids.de",
     "name":          "Area Screenshot",
     "description":   "Make a screenshot of a specific area",
